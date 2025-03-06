@@ -4,11 +4,31 @@ on:
   push:
 
 jobs:
+  load-mappings:
+    runs-on: ubuntu-latest
+    outputs:
+      # Pass the mappings to the next job as an output
+      mappings: ${{ steps.load-mappings.outputs.mappings }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Load mappings from JSON
+        id: load-mappings
+        run: |
+          # Read the JSON file containing the mappings
+          ITEMS_JSON=$(cat items.json)
+
+          # Optionally, create a stringified JSON object to be passed as output
+          echo "mappings=${ITEMS_JSON}" >> $GITHUB_OUTPUT
+
   matrix-job:
     runs-on: ubuntu-latest
+    needs: load-mappings
     strategy:
       matrix:
-        item: [apple, banana, cherry]
+        item: ${{ fromJson(needs.load-mappings.outputs.mappings) }}  # Use the mappings output from the previous job
 
     outputs:
       images: ${{ steps.set-output.outputs.images }}
@@ -16,19 +36,19 @@ jobs:
     steps:
       - name: Set Image Name
         id: image
-        run: echo "name=${{ matrix.item }}" >> $GITHUB_OUTPUT
+        run: echo "name=${{ matrix.item.name }}" >> $GITHUB_OUTPUT
 
       - name: Generate Output
         id: set-output
         run: |
-          IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}-Holders" '{ ($key): $url }')
+          IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item.name }}" --arg url "${{ matrix.item.url }}" '{ ($key): $url }')
           echo "$IMAGE_INFO" > output.json  # Save the JSON in a file
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           # Use a unique artifact name based on matrix item
-          name: matrix-output-${{ matrix.item }}
+          name: matrix-output-${{ matrix.item.name }}
           path: output.json
 
 
@@ -37,23 +57,32 @@ jobs:
     runs-on: ubuntu-latest
     needs: matrix-job
     steps:
-      - name: Download Artifact for Apple
-        uses: actions/download-artifact@v4
-        with:
-          name: matrix-output-apple
-          path: ./artifacts/apple
+      - name: Download Matrix Artifacts
+        run: |
+          # Dynamically download the matrix artifacts
+          for item in $(echo "${{ needs.load-mappings.outputs.mappings }}" | jq -r '.[].name'); do
+            echo "Downloading matrix-output-$item"
+            actions/download-artifact@v4:
+              name: matrix-output-$item
+              path: ./artifacts/$item
+          done
+      # - name: Download Artifact for Apple
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: matrix-output-apple
+      #     path: ./artifacts/apple
 
-      - name: Download Artifact for Banana
-        uses: actions/download-artifact@v4
-        with:
-          name: matrix-output-banana
-          path: ./artifacts/banana
+      # - name: Download Artifact for Banana
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: matrix-output-banana
+      #     path: ./artifacts/banana
 
-      - name: Download Artifact for Cherry
-        uses: actions/download-artifact@v4
-        with:
-          name: matrix-output-cherry
-          path: ./artifacts/cherry
+      # - name: Download Artifact for Cherry
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: matrix-output-cherry
+      #     path: ./artifacts/cherry
 
       - name: Merge Matrix Outputs
         id: merge
