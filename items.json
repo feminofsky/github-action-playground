@@ -1,4 +1,5 @@
-[
+{
+ "mappings": [
     {
       "name": "apple",
       "url": "https://apple.com",
@@ -15,4 +16,5 @@
       "key": "token-7891011"
     }
   ]
+}
   
