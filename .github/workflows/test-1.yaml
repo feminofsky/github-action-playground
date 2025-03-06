@@ -23,16 +23,23 @@ jobs:
         id: process
         run: |
           # Simulate processing of mapping
-          result=$(jq -n \
-            --arg name "${{ matrix.mapping.name }}" \
-            --arg value "${{ matrix.mapping.value }}" \
-            '{name: $name, processed_value: ($value + "_processed")}')
-          echo "result=$result" >> $GITHUB_OUTPUT
+          processed_value="${{ matrix.mapping.value }}_processed"
+          echo "name=${{ matrix.mapping.name }}" >> $GITHUB_OUTPUT
+          echo "processed_value=$processed_value" >> $GITHUB_OUTPUT
 
       - name: Set Matrix Result
         id: set-matrix-result
         run: |
-          echo "result=${{ steps.process.outputs.result }}" >> $GITHUB_OUTPUT
+          # Create a JSON object from the individual outputs
+          result=$(jq -n \
+            --arg name "${{ steps.process.outputs.name }}" \
+            --arg processed "${{ steps.process.outputs.processed_value }}" \
+            '{name: $name, processed_value: $processed}')
+          # Escape the JSON for GitHub Actions output
+          result="${result//'%'/'%25'}"
+          result="${result//$'\n'/'%0A'}"
+          result="${result//$'\r'/'%0D'}"
+          echo "result=$result" >> $GITHUB_OUTPUT
 
   merge-results:
     needs: process-mappings
