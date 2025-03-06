@@ -66,10 +66,18 @@ jobs:
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
 
+          # Ensure the JSON is formatted correctly (single-line JSON)
+          MERGED_JSON=$(echo "$JSON_OBJ" | jq -c .)
+
           # Save the final merged JSON
-          echo "$JSON_OBJ" > merged.json
-          echo "result=$(cat merged.json)" >> $GITHUB_OUTPUT
+          echo "$MERGED_JSON" > merged.json
+
+          # Set the merged JSON as output (single-line)
+          echo "result=$MERGED_JSON" >> $GITHUB_OUTPUT
 
       - name: Show Merged JSON
-        run: cat merged.json
+        run: |
+          echo "Merged JSON:"
+          cat merged.json
+
       
