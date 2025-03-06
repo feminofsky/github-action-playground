@@ -10,9 +10,6 @@ jobs:
       matrix:
         item: [apple, banana, cherry]
 
-    outputs:
-      images: ${{ steps.set-output.outputs.images }}
-
     steps:
       - name: Set Image Name
         id: image
@@ -23,6 +20,7 @@ jobs:
         run: |
           IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}" '{ ($key): $url }')
           echo "images=$IMAGE_INFO" >> $GITHUB_OUTPUT
+          echo "images=$IMAGE_INFO" >> $GITHUB_ENV
 
   collect-outputs:
     runs-on: ubuntu-latest
@@ -33,15 +31,18 @@ jobs:
       - name: Initialize JSON Object
         run: echo '{}' > merged.json
 
-      - name: Merge Matrix Outputs
+
+      - name: Merge Matrix Outputs Dynamically
         id: merge
         run: |
           JSON_OBJ='{}'
-          echo "${{ needs.matrix-job.outputs.images }}"
-          for item in apple banana cherry; do
-            PART='${{ needs.matrix-job.outputs.images }}'
+
+          # Iterate through the matrix context dynamically
+          for item in "${{ toJson(needs.matrix-job.outputs.images) }}"; do
+            PART=$(jq -c -n --arg key "$item" --arg value "$item" '{ ($key): $value }')
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
+
           echo "$JSON_OBJ" > merged.json
           echo "result=$(cat merged.json)" >> $GITHUB_OUTPUT
 
