@@ -25,7 +25,7 @@ jobs:
           echo "$IMAGE_INFO" > output.json  # Save the JSON in a file
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           # Use a unique artifact name based on matrix item
           name: matrix-output-${{ matrix.item }}
@@ -54,7 +54,7 @@ jobs:
           # Iterate over the artifact names and download them
           while IFS= read -r artifact; do
             echo "Downloading $artifact"
-            actions/download-artifact@v3:
+            actions/download-artifact@v4:
               name: "$artifact"
               path: "./artifacts/$artifact"
           done < artifacts.txt
