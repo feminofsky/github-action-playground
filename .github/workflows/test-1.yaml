@@ -24,9 +24,6 @@ jobs:
           EOF
           )
           # Escape the matrix for GitHub Actions output
-          matrix="${matrix//'%'/'%25'}"
-          matrix="${matrix//$'\n'/'%0A'}"
-          matrix="${matrix//$'\r'/'%0D'}"
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   process-mappings:
