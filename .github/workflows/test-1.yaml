@@ -37,25 +37,30 @@ jobs:
     runs-on: ubuntu-latest
     needs: matrix-job
     steps:
-      - name: Download Matrix Outputs Artifact
-        run: |
-          # List matrix items
-          ITEMS=("apple" "banana" "cherry")
+      - name: Download Artifact for Apple
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix-output-apple
+          path: ./artifacts/apple
 
-          # Download all matrix artifacts dynamically
-          for item in "${ITEMS[@]}"; do
-            echo "Downloading matrix-output-$item"
-            actions/download-artifact@v4:
-              name: matrix-output-$item
-              path: ./artifacts/$item
-          done
+      - name: Download Artifact for Banana
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix-output-banana
+          path: ./artifacts/banana
+
+      - name: Download Artifact for Cherry
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix-output-cherry
+          path: ./artifacts/cherry
 
       - name: Merge Matrix Outputs
         id: merge
         run: |
           JSON_OBJ='{}'
-
-          # Loop through all downloaded files and merge them
+          
+          # Iterate through all output.json files in the artifact folder
           for file in ./artifacts/*/output.json; do
             PART=$(cat "$file")
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
@@ -67,6 +72,4 @@ jobs:
 
       - name: Show Merged JSON
         run: cat merged.json
-
-
       
