@@ -3,7 +3,7 @@ name: Matrix Mapping Processing
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main-1 ]
 
 jobs:
   process-mappings:

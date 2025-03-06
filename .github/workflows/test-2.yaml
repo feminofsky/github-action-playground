@@ -73,7 +73,7 @@ jobs:
           JSON_OBJ='{}'
           
           # Iterate through all output.json files in the artifact folder
-          for file in ./artifacts/*/output-*.json; do
+          for file in */output-*.json; do
             PART=$(cat "$file")
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
