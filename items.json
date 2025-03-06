@@ -1,0 +1,18 @@
+[
+    {
+      "name": "apple",
+      "url": "https://apple.com",
+      "key": "token-4543543"
+    },
+    {
+      "name": "banana",
+      "url": "https://banana.com",
+      "key": "token-123456"
+    },
+    {
+      "name": "cherry",
+      "url": "https://cherry.com",
+      "key": "token-7891011"
+    }
+  ]
+  
