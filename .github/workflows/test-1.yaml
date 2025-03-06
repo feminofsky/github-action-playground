@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # Use a unique artifact name based on matrix item
-          name: matrix-output-${{ matrix.item }}
+          name: matrix-outputs
           path: output.json
 
 
@@ -37,43 +37,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: matrix-job
     steps:
-      - name: Create Artifact Download List
-        id: download_list
-        run: |
-          # List of matrix items
-          ITEMS=("apple" "banana" "cherry")
-
-          # Create a list of artifact download paths
-          echo "Downloading artifacts for ${ITEMS[@]}"
-          for item in "${ITEMS[@]}"; do
-            echo "matrix-output-$item"
-          done > artifacts.txt
-
-      - name: Download All Matrix Artifacts
-        run: |
-          # Iterate over the artifact names and download them
-          while IFS= read -r artifact; do
-            echo "Downloading $artifact"
-            actions/download-artifact@v4:
-              name: "$artifact"
-              path: "./artifacts/$artifact"
-          done < artifacts.txt
+      - name: Download Matrix Outputs Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix-outputs  # Artifact name we uploaded earlier
+          path: ./artifacts  # Directory to store the downloaded artifact
 
       - name: Merge Matrix Outputs
         id: merge
         run: |
           JSON_OBJ='{}'
-
-          # Loop through all downloaded files and merge them
-          for file in ./artifacts/*/output.json; do
+          # Iterate through all output.json files in the artifact folder
+          for file in ./artifacts/*; do
             PART=$(cat "$file")
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
 
-          # Write the merged JSON to a file
+          # Save the final merged JSON
           echo "$JSON_OBJ" > merged.json
-          # Set the merged JSON as an output (ensure it's single-line)
-          echo "result=$(cat merged.json | jq -c)" >> $GITHUB_OUTPUT
+          echo "result=$(cat merged.json)" >> $GITHUB_OUTPUT
 
       - name: Show Merged JSON
         run: cat merged.json
