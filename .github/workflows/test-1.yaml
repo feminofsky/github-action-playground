@@ -46,14 +46,14 @@ jobs:
         id: set-output
         run: |
           IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item.name }}" --arg url "${{ matrix.item.url }}" '{ ($key): $url }')
-          echo "$IMAGE_INFO" > output.json  # Save the JSON in a file
+          echo "$IMAGE_INFO" > output-${{ matrix.item.name }}.json  # Save the JSON in a file
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           # Use a unique artifact name based on matrix item
-          name: matrix-output-${{ matrix.item.name }}
-          path: output.json
+          name: matrix-output
+          path: output-${{ matrix.item.name }}.json
 
 
   collect-outputs:
@@ -62,21 +62,21 @@ jobs:
     - matrix-job
     - load-mappings
     steps:
-      - name: Download Matrix Artifacts
-        run: |
-          ITEMS_JSON='${{ needs.load-mappings.outputs.mappings }}'
-          # Dynamically download the matrix artifacts
-          for item in $(echo "$ITEMS_JSON" | jq -r '.[].name'); do
-            echo "Downloading matrix-output-$item"
-            actions/download-artifact@v4:
-              name: matrix-output-$item
-              path: ./artifacts/$item
-          done
-      # - name: Download Artifact for Apple
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: matrix-output-apple
-      #     path: ./artifacts/apple
+      # - name: Download Matrix Artifacts
+      #   run: |
+      #     ITEMS_JSON='${{ needs.load-mappings.outputs.mappings }}'
+      #     # Dynamically download the matrix artifacts
+      #     for item in $(echo "$ITEMS_JSON" | jq -r '.[].name'); do
+      #       echo "Downloading matrix-output-$item"
+      #       actions/download-artifact@v4:
+      #         name: matrix-output-$item
+      #         path: ./artifacts/$item
+      #     done
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: matrix-output
+          path: ./artifacts/outputs
 
       # - name: Download Artifact for Banana
       #   uses: actions/download-artifact@v4
@@ -96,7 +96,7 @@ jobs:
           JSON_OBJ='{}'
           
           # Iterate through all output.json files in the artifact folder
-          for file in ./artifacts/*/output.json; do
+          for file in ./artifacts/outputs/output-*.json; do
             PART=$(cat "$file")
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
