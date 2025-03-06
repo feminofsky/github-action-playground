@@ -56,7 +56,6 @@ jobs:
           path: output.json
 
 
-
   collect-outputs:
     runs-on: ubuntu-latest
     needs: 
@@ -65,8 +64,9 @@ jobs:
     steps:
       - name: Download Matrix Artifacts
         run: |
+          ITEMS_JSON="${{ needs.load-mappings.outputs.mappings }}"
           # Dynamically download the matrix artifacts
-          for item in $(echo "${{ needs.load-mappings.outputs.mappings }}" | jq -r '.[].name'); do
+          for item in $(echo "$ITEMS_JSON" | jq -r '.[].name'); do
             echo "Downloading matrix-output-$item"
             actions/download-artifact@v4:
               name: matrix-output-$item
