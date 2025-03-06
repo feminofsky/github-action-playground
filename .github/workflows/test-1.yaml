@@ -19,30 +19,36 @@ jobs:
         id: set-output
         run: |
           IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}" '{ ($key): $url }')
-          echo "images=$IMAGE_INFO" >> $GITHUB_OUTPUT
-          echo "images=$IMAGE_INFO" >> $GITHUB_ENV
+          echo "$IMAGE_INFO" > output.json  # Save JSON to a file
+
+      - name: Upload Matrix Outputs as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: matrix-outputs
+          path: output.json  # Upload the output file
 
   collect-outputs:
     runs-on: ubuntu-latest
     needs: matrix-job
-    outputs:
-      merged_json: ${{ steps.merge.outputs.result }}
     steps:
-      - name: Initialize JSON Object
-        run: echo '{}' > merged.json
+      - name: Download Matrix Outputs Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: matrix-outputs  # Artifact name we uploaded earlier
+          path: ./artifacts  # Directory to store the downloaded artifact
 
-
-      - name: Merge Matrix Outputs Dynamically
+      - name: Merge Matrix Outputs
         id: merge
         run: |
           JSON_OBJ='{}'
 
-          # Iterate through the matrix context dynamically
-          for item in "${{ toJson(needs.matrix-job.outputs.images) }}"; do
-            PART=$(jq -c -n --arg key "$item" --arg value "$item" '{ ($key): $value }')
+          # Iterate through all output.json files in the artifact folder
+          for file in ./artifacts/*; do
+            PART=$(cat "$file")
             JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
 
+          # Save the final merged JSON
           echo "$JSON_OBJ" > merged.json
           echo "result=$(cat merged.json)" >> $GITHUB_OUTPUT
 
