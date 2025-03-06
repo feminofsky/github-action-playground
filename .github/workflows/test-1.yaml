@@ -59,7 +59,9 @@ jobs:
 
   collect-outputs:
     runs-on: ubuntu-latest
-    needs: matrix-job
+    needs: 
+    - matrix-job
+    - load-mappings
     steps:
       - name: Download Matrix Artifacts
         run: |
