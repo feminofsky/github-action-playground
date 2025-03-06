@@ -6,22 +6,37 @@ on:
     branches: [ main ]
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set Matrix
+        id: set-matrix
+        run: |
+          # Define your mappings here or fetch them from a source
+          matrix=$(cat << EOF
+          [
+            { "name": "mapping1", "value": "test1" },
+            { "name": "mapping2", "value": "test2" },
+            { "name": "mapping3", "value": "test3" }
+          ]
+          EOF
+          )
+          # Escape the matrix for GitHub Actions output
+          matrix="${matrix//'%'/'%25'}"
+          matrix="${matrix//$'\n'/'%0A'}"
+          matrix="${matrix//$'\r'/'%0D'}"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
   process-mappings:
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mapping: [
-          { "name": "mapping1", "value": "test1" },
-          { "name": "mapping2", "value": "test2" },
-          { "name": "mapping3", "value": "test3" }
-        ]
+        mapping: ${{ fromJson(needs.setup.outputs.matrix) }}
       # Make sure all matrix jobs run even if one fails
       fail-fast: false
-    outputs:
-      # Each matrix job will output to a unique key based on the mapping name
-      matrix-result-mapping1: ${{ steps.set-output.outputs.result-mapping1 || '' }}
-      matrix-result-mapping2: ${{ steps.set-output.outputs.result-mapping2 || '' }}
-      matrix-result-mapping3: ${{ steps.set-output.outputs.result-mapping3 || '' }}
     
     steps:
       - name: Process Mapping
@@ -29,47 +44,55 @@ jobs:
         run: |
           # Simulate processing of mapping
           processed_value="${{ matrix.mapping.value }}_processed"
-          echo "name=${{ matrix.mapping.name }}" >> $GITHUB_OUTPUT
-          echo "processed_value=$processed_value" >> $GITHUB_OUTPUT
-
-      - name: Set Output
-        id: set-output
-        run: |
-          # Create a JSON object from the individual outputs
+          
+          # Create a JSON object with the results
           result=$(jq -n \
-            --arg name "${{ steps.process.outputs.name }}" \
-            --arg processed "${{ steps.process.outputs.processed_value }}" \
+            --arg name "${{ matrix.mapping.name }}" \
+            --arg processed "$processed_value" \
             '{name: $name, processed_value: $processed}')
           
-          # Escape the JSON for GitHub Actions output
-          result="${result//'%'/'%25'}"
-          result="${result//$'\n'/'%0A'}"
-          result="${result//$'\r'/'%0D'}"
+          # Save the result to a file with a unique name
+          echo "$result" > result_${{ matrix.mapping.name }}.json
           
-          # Output to a unique key based on the mapping name
-          echo "result-${{ matrix.mapping.name }}=$result" >> $GITHUB_OUTPUT
+      - name: Upload Result
+        uses: actions/upload-artifact@v3
+        with:
+          name: result-${{ matrix.mapping.name }}
+          path: result_${{ matrix.mapping.name }}.json
+          retention-days: 1
 
   merge-results:
-    needs: process-mappings
+    needs: [setup, process-mappings]
     runs-on: ubuntu-latest
     steps:
+      - name: Download All Results
+        uses: actions/download-artifact@v3
+        
       - name: Merge Results
         id: merge
         run: |
-          # Create an array of all the matrix results
-          results='[
-            ${{ needs.process-mappings.outputs.matrix-result-mapping1 }},
-            ${{ needs.process-mappings.outputs.matrix-result-mapping2 }},
-            ${{ needs.process-mappings.outputs.matrix-result-mapping3 }}
-          ]'
+          # Create an array to hold all results
+          echo "[]" > merged_results.json
           
-          # Clean up the array (remove empty items)
-          merged_json=$(echo "$results" | jq 'map(select(. != null and . != ""))')
+          # Find all result files and merge them
+          for result_dir in result-*; do
+            if [ -d "$result_dir" ]; then
+              result_file="$result_dir/$(ls $result_dir)"
+              if [ -f "$result_file" ]; then
+                # Merge this result into the array
+                jq -s '.[0] + [.[1]]' merged_results.json "$result_file" > tmp.json
+                mv tmp.json merged_results.json
+              fi
+            fi
+          done
+          
+          # Output the merged results
+          merged_json=$(cat merged_results.json)
           echo "merged_results=$merged_json" >> $GITHUB_OUTPUT
 
       - name: Show Merged Results
         run: |
           echo "Merged Results:"
-          echo '${{ steps.merge.outputs.merged_results }}' | jq '.'
+          cat merged_results.json | jq '.'
 
       
