@@ -22,33 +22,60 @@ jobs:
         id: set-output
         run: |
           IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}" '{ ($key): $url }')
-          echo "images=$IMAGE_INFO" >> $GITHUB_OUTPUT
-          echo "images=$IMAGE_INFO" >> $GITHUB_ENV
+          echo "$IMAGE_INFO" > output.json  # Save the JSON in a file
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          # Use a unique artifact name based on matrix item
+          name: matrix-output-${{ matrix.item }}
+          path: output.json
+
+
 
   collect-outputs:
     runs-on: ubuntu-latest
     needs: matrix-job
-    outputs:
-      merged_json: ${{ steps.merge.outputs.result }}
     steps:
-      - name: Initialize JSON Object
-        run: echo '{}' > merged.json
+      - name: Create Artifact Download List
+        id: download_list
+        run: |
+          # List of matrix items
+          ITEMS=("apple" "banana" "cherry")
 
-      - name: Merge Matrix Outputs Dynamically
+          # Create a list of artifact download paths
+          echo "Downloading artifacts for ${ITEMS[@]}"
+          for item in "${ITEMS[@]}"; do
+            echo "matrix-output-$item"
+          done > artifacts.txt
+
+      - name: Download All Matrix Artifacts
+        run: |
+          # Iterate over the artifact names and download them
+          while IFS= read -r artifact; do
+            echo "Downloading $artifact"
+            actions/download-artifact@v3:
+              name: "$artifact"
+              path: "./artifacts/$artifact"
+          done < artifacts.txt
+
+      - name: Merge Matrix Outputs
         id: merge
         run: |
           JSON_OBJ='{}'
 
-          # Iterate through the matrix context dynamically
-          for item in ${{ toJson(needs.matrix-job.outputs.images) }}; do
-            PART=$(echo $item | jq -c '.')
-            JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. * $part')
+          # Loop through all downloaded files and merge them
+          for file in ./artifacts/*/output.json; do
+            PART=$(cat "$file")
+            JSON_OBJ=$(echo $JSON_OBJ | jq --argjson part "$PART" '. + $part')
           done
 
+          # Write the merged JSON to a file
           echo "$JSON_OBJ" > merged.json
-          echo "result=$(cat merged.json)" >> $GITHUB_OUTPUT
+          # Set the merged JSON as an output (ensure it's single-line)
+          echo "result=$(cat merged.json | jq -c)" >> $GITHUB_OUTPUT
 
-      - name: Print Merged JSON
+      - name: Show Merged JSON
         run: cat merged.json
 
       
