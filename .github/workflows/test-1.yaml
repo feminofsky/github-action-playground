@@ -21,7 +21,7 @@ jobs:
       - name: Generate Output
         id: set-output
         run: |
-          IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}" '{ ($key): $url }')
+          IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}-Holders" '{ ($key): $url }')
           echo "$IMAGE_INFO" > output.json  # Save the JSON in a file
 
       - name: Upload Artifact
