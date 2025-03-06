@@ -21,10 +21,7 @@ jobs:
       - name: Generate Output
         id: set-output
         run: |
-          IMAGE_INFO=$(jq -n \
-                --arg key "${{ matrix.item }}" \
-                --arg url "${{ steps.image.outputs.name }}" \
-                 '{ ($key): $url }')
+          IMAGE_INFO=$(jq -c -n --arg key "${{ matrix.item }}" --arg url "${{ matrix.item }}" '{ ($key): $url }')
           echo "images=$IMAGE_INFO" >> $GITHUB_OUTPUT
 
   collect-outputs:
