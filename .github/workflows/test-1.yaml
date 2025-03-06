@@ -6,32 +6,15 @@ on:
     branches: [ main ]
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - name: Set Matrix
-        id: set-matrix
-        run: |
-          # Define your mappings here or fetch them from a source
-          matrix=$(cat << EOF
-          [
-            { "name": "mapping1", "value": "test1" },
-            { "name": "mapping2", "value": "test2" },
-            { "name": "mapping3", "value": "test3" }
-          ]
-          EOF
-          )
-          # Escape the matrix for GitHub Actions output
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
-
   process-mappings:
-    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mapping: ${{ fromJson(needs.setup.outputs.matrix) }}
+        mapping: [
+          { "name": "mapping1", "value": "test1" },
+          { "name": "mapping2", "value": "test2" },
+          { "name": "mapping3", "value": "test3" }
+        ]
       # Make sure all matrix jobs run even if one fails
       fail-fast: false
     
@@ -59,7 +42,7 @@ jobs:
           retention-days: 1
 
   merge-results:
-    needs: [setup, process-mappings]
+    needs: process-mappings
     runs-on: ubuntu-latest
     steps:
       - name: Download All Results
