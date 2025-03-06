@@ -35,7 +35,7 @@ jobs:
           echo "$result" > result_${{ matrix.mapping.name }}.json
           
       - name: Upload Result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: result-${{ matrix.mapping.name }}
           path: result_${{ matrix.mapping.name }}.json
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download All Results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         
       - name: Merge Results
         id: merge
