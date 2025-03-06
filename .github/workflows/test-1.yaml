@@ -18,7 +18,11 @@ jobs:
         id: load-mappings
         run: |
           # Read the JSON file containing the mappings
-          ITEMS_JSON=$(cat items.json)
+          ITEMS_JSON=$(jq -c '.mappings | map({
+            name: .name,
+            key: .key,
+            url: .url,
+          })' items.json)
 
           # Optionally, create a stringified JSON object to be passed as output
           echo "mappings=${ITEMS_JSON}" >> $GITHUB_OUTPUT
