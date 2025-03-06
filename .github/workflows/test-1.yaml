@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Download Matrix Artifacts
         run: |
-          ITEMS_JSON="${{ needs.load-mappings.outputs.mappings }}"
+          ITEMS_JSON='${{ needs.load-mappings.outputs.mappings }}'
           # Dynamically download the matrix artifacts
           for item in $(echo "$ITEMS_JSON" | jq -r '.[].name'); do
             echo "Downloading matrix-output-$item"
