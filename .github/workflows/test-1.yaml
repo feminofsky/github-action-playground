@@ -66,9 +66,14 @@ jobs:
             fi
           done
           
-          # Output the merged results
+          # Properly escape the JSON for GitHub Actions output
           merged_json=$(cat merged_results.json)
-          echo "merged_results=$merged_json" >> $GITHUB_OUTPUT
+          merged_json="${merged_json//'%'/'%25'}"
+          merged_json="${merged_json//$'\n'/'%0A'}"
+          merged_json="${merged_json//$'\r'/'%0D'}"
+          echo "merged_results<<EOF" >> $GITHUB_OUTPUT
+          echo "$merged_json" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Show Merged Results
         run: |
